@@ -1,0 +1,8 @@
+{
+  "name": "er-probe2",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  // 限額刻意設小(5 次 / 10 秒)以便觀察。namespace_id 與 BBS 的 1001、1002、9001 錯開。
+  "ratelimits": [{ "name": "RL", "namespace_id": "9106", "simple": { "limit": 5, "period": 10 } }]
+}

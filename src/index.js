@@ -11,12 +11,13 @@ export default {
     if (url.pathname === "/verify" && req.method === "POST") return verify(req, env, url);
     if (url.pathname === "/rl") return rl(req, env, url);
     if (url.pathname === "/rlburst") return burst(req, env, url);
+    if (url.pathname === "/envcheck") return json({ bindings: Object.keys(env), hasSecret: !!env.TURNSTILE_SECRET, secretLength: (env.TURNSTILE_SECRET || "").length, colo: req.cf?.colo });
     return new Response("not found", { status: 404 });
   },
 };
 
 async function verify(req, env, url) {
-  if (!env.TURNSTILE_SECRET) return json({ error: "尚未設定 Secret TURNSTILE_SECRET" }, 500);
+  if (!env.TURNSTILE_SECRET) return json({ error: "尚未設定 Secret TURNSTILE_SECRET", 這個Worker看得到的綁定名稱: Object.keys(env), 提示: "名稱必須完全是 TURNSTILE_SECRET,且要加在這個 Worker(er-probe)上;加完後要等新版本部署完成" }, 500);
   const { token } = await req.json().catch(() => ({ token: "" }));
   const form = new URLSearchParams({ secret: env.TURNSTILE_SECRET, response: token ?? "" });
   const ip = req.headers.get("cf-connecting-ip");
@@ -71,6 +72,11 @@ const PAGE = `<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta na
 <button onclick="browserSeq()">6 瀏覽器循序連打 20 次</button>
 <button onclick="browserPar()">7 瀏覽器平行連打 20 次</button>
 <button onclick="single()">8 單次</button>
+
+<h3>C. 第 21 張用的補充量測</h3>
+<button onclick="timeline()">9 時間軸:每秒 1 次、共 25 秒(看視窗怎麼重置)</button>
+<button onclick="twoKeys()">10 兩個不同 key 是否各自計數</button>
+<button onclick="envcheck()">11 檢查 Worker 設定(不會顯示 secret 內容)</button>
 
 <p><button onclick="navigator.clipboard.writeText(out.textContent)">複製全部結果</button> <button onclick="out.textContent=''">清除</button></p>
 <pre id="out"></pre>
@@ -133,5 +139,17 @@ async function browserPar() {
   var seq = rs.map(function (j) { colos[j.colo] = 1; return j.success ? "o" : "x"; }).join("");
   log({ step: "瀏覽器平行連打", sequence: seq, allowed: seq.split("o").length - 1, colos: Object.keys(colos), elapsedMs: Math.round(performance.now() - t0) });
 }
+async function timeline() {
+  log("時間軸開始(25 秒,請不要切換分頁)。o=放行 x=拒絕");
+  var line = "", t0 = Date.now();
+  for (var i = 0; i < 25; i++) { var j = await (await fetch("/rl?key=timeline-" + t0)).json(); line += j.success ? "o" : "x"; if (i % 5 === 4) line += " "; await new Promise(function (r) { setTimeout(r, 1000); }); }
+  log({ step: "時間軸(每秒 1 次,限額 5 次/10 秒)", sequence: line, allowed: line.split("o").length - 1 });
+}
+async function twoKeys() {
+  var a = await (await fetch("/rlburst?n=10&key=A-" + Date.now())).json();
+  var b = await (await fetch("/rlburst?n=10&key=B-" + Date.now())).json();
+  log({ step: "兩個不同 key 各連打 10 次", A: a.sequence, B: b.sequence, 結論: a.allowed === b.allowed ? "各自獨立計數" : "不一致,請回報" });
+}
+async function envcheck() { var j = await (await fetch("/envcheck")).json(); j.step = "Worker 設定"; log(j); }
 async function single() { var j = await (await fetch("/rl?key=" + keyv())).json(); j.step = "單次"; log(j); }
 </script></html>`;

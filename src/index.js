@@ -17,7 +17,7 @@ export default {
 };
 
 async function verify(req, env, url) {
-  if (!env.TURNSTILE_SECRET) return json({ error: "尚未設定 Secret TURNSTILE_SECRET", 這個Worker看得到的綁定名稱: Object.keys(env), 提示: "名稱必須完全是 TURNSTILE_SECRET,且要加在這個 Worker(er-probe)上;加完後要等新版本部署完成" }, 500);
+  if (!env.TURNSTILE_SECRET) return json({ error: "尚未設定 Secret TURNSTILE_SECRET", 這個Worker看得到的綁定名稱: Object.keys(env), 提示: "名稱必須完全是 TURNSTILE_SECRET,且要加在這個 Worker(er-probe2)上;加完後要等新版本部署完成" }, 500);
   const { token } = await req.json().catch(() => ({ token: "" }));
   const form = new URLSearchParams({ secret: env.TURNSTILE_SECRET, response: token ?? "" });
   const ip = req.headers.get("cf-connecting-ip");
@@ -74,7 +74,7 @@ const PAGE = `<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta na
 <button onclick="single()">8 單次</button>
 
 <h3>C. 第 21 張用的補充量測</h3>
-<button onclick="timeline()">9 時間軸:每秒 1 次、共 25 秒(看視窗怎麼重置)</button>
+<button onclick="runTimeline()">9 時間軸:每秒 1 次、共 25 秒(看視窗怎麼重置)</button>
 <button onclick="twoKeys()">10 兩個不同 key 是否各自計數</button>
 <button onclick="envcheck()">11 檢查 Worker 設定(不會顯示 secret 內容)</button>
 
@@ -139,7 +139,7 @@ async function browserPar() {
   var seq = rs.map(function (j) { colos[j.colo] = 1; return j.success ? "o" : "x"; }).join("");
   log({ step: "瀏覽器平行連打", sequence: seq, allowed: seq.split("o").length - 1, colos: Object.keys(colos), elapsedMs: Math.round(performance.now() - t0) });
 }
-async function timeline() {
+async function runTimeline() {
   log("時間軸開始(25 秒,請不要切換分頁)。o=放行 x=拒絕");
   var line = "", t0 = Date.now();
   for (var i = 0; i < 25; i++) { var j = await (await fetch("/rl?key=timeline-" + t0)).json(); line += j.success ? "o" : "x"; if (i % 5 === 4) line += " "; await new Promise(function (r) { setTimeout(r, 1000); }); }
